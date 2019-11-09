@@ -1,7 +1,26 @@
 import * as Yup from 'yup';
 import Plan from '../models/Plan';
+import Admin from '../models/Admin';
 
 class PlanController {
+  async index(req, res) {
+    const plans = await Plan.findAll({
+      where: {
+        admin_id: req.adminId,
+        canceled_at: null,
+      },
+      attributes: ['id', 'title', 'duration', 'price'],
+      include: [
+        {
+          model: Admin,
+          as: 'admins',
+          attributes: ['name', 'email'],
+        },
+      ],
+    });
+    return res.status(200).json(plans);
+  }
+
   async store(req, res) {
     const shecma = Yup.object().shape({
       title: Yup.string().required(),
@@ -20,7 +39,37 @@ class PlanController {
       price,
       admin_id: req.adminId,
     });
-    return res.status(200).json(plan);
+    return res.status(200).json({ title, duration, price });
+  }
+
+  async update(req, res) {
+    const { id } = req.params;
+    const plan = await Plan.findByPk(id);
+
+    if (plan.admin_id !== req.adminId) {
+      return res
+        .status(401)
+        .json({ error: 'You are not the creator of the plan' });
+    }
+    const { title, price, duration } = await plan.update(req.body);
+    return res.status(200).json({
+      title,
+      price,
+      duration,
+    });
+  }
+
+  async delete(req, res) {
+    const { id } = req.params;
+    const plan = await Plan.findByPk(id);
+
+    if (plan.admin_id !== req.adminId) {
+      res.status(401).json({ error: 'You are not the creator of the plan' });
+    }
+    await plan.update({
+      canceled_at: true,
+    });
+    return res.json({ message: 'Plan Successfully deleted' });
   }
 }
 
