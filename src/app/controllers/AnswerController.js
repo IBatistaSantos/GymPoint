@@ -18,8 +18,6 @@ class AnswerController {
     if (!helpOrder) {
       return res.status(400).json({ error: 'Question not found' });
     }
-    console.log(answer);
-
     const answerQuestion = await helpOrder.update({
       answer,
       answer_at: new Date(),
